@@ -25,7 +25,6 @@ SDL_Window *initWindow() {
 
 int main(int argc, char *argv[]) {
   cpu cpu;
-  cpu.init();
   bool running = true;
 
   SDL_Window *window = initWindow();
@@ -35,8 +34,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // if (argc != 2) {
-  //   std::cout << "Enter the filename to open" << std::endl;
+  cpu.init();
+  // TODO:: change to argv[1] after
+  if (!cpu.loadRom("./IBM.ch8")) {
+    running = false;
+  }
+  /// if (argc != 2) {/   std::cout << "Enter the filename to open" <<
+  /// std::endl;
   //   SDL_Quit();
   // }
 

@@ -17,8 +17,7 @@ private:
   unsigned short sp;     // Stack Pointer
   unsigned char key[16]; // State of keys 0-F
 
-  char rom;
-
 public:
   void init();
+  int loadRom(const char *romName);
 };

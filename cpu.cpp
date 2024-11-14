@@ -1,5 +1,9 @@
 #include "cpu.h"
+#include <cstdio>
 #include <cstring>
+#include <iostream>
+#include <stdio.h>
+
 unsigned char chip8_fontset[80] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -32,4 +36,25 @@ void cpu::init() {
   for (int i = 0; i < 80; i++) {
     memory[i] = chip8_fontset[i];
   }
+}
+
+int cpu::loadRom(const char *romName) {
+  int count = 0;
+  FILE *rom = fopen(romName, "rb");
+  if (!rom) {
+    std::cout << "Error: opening rom";
+    return 1;
+  }
+  while (!feof(rom)) {
+    fread(&memory[0x200 + count], 1, 1, rom);
+    count++;
+  }
+  fclose(rom);
+
+  // // DEBUG
+  // for (int i = 0x200; i < 0x1000; i++) {
+  //   std::cout << std::hex << memory[i] << " ";
+  // }
+
+  return 0;
 }
