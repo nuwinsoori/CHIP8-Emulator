@@ -1,4 +1,4 @@
-CFLAGS= -std=c17 -Wall
+CFLAGS= -std=c++11 -Wall
 
 all:
-	gcc main.c -o chip8 $(CFLAGS) `pkg-config sdl3 --cflags --libs`
+	gcc main.cpp cpu.cpp -o chip8 $(CFLAGS) `pkg-config sdl3 --cflags --libs`

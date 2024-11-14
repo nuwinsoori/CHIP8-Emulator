@@ -1,6 +1,8 @@
-typedef struct {
-  // unsigned short 2bytes
-  // unsigned char 1byte
+#pragma once
+// unsigned short 2bytes
+// unsigned char 1byte
+class cpu {
+private:
   unsigned short opcode;
   unsigned memory[4096];
   unsigned char V[16];        // Registers V0-VE
@@ -14,4 +16,9 @@ typedef struct {
   unsigned short stack[16];
   unsigned short sp;     // Stack Pointer
   unsigned char key[16]; // State of keys 0-F
-} cpu;
+
+  char rom;
+
+public:
+  void init();
+};
