@@ -1,5 +1,4 @@
 #include "cpu.h"
-#include <bitset>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -89,22 +88,28 @@ void cpu::executeCycle() {
   case (0x0):
     switch (opcode & 0x000F) {
     case (0x0): // 00E0: Clear Screen
+      std::cout << "00e0 ";
       memset(gfx, 0, 64 * 32);
       break;
     }
   case (0x1): // 1NNN: jump to NNN
+    std::cout << "1nnn ";
     pc = OP_NNN;
     break;
-  case (0x6): // 6XNNN: set V[X] to NN;
+  case (0x6): // 6XNN: set V[X] to NN;
+    std::cout << "6xnn ";
     V[OP_X] = OP_NNN;
     break;
   case (0x7): // 7XNN: V[X] += NN
+    std::cout << "7xnn ";
     V[OP_X] += OP_NN;
     break;
   case (0xA): // ANNN: I = NNN
+    std::cout << "annn ";
     I = OP_NNN;
     break;
   case (0xD): // DXYN: Display
+    std::cout << "dxyn ";
     break;
   }
 }
