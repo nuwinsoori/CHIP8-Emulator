@@ -1,6 +1,9 @@
 #include "cpu.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_oldnames.h>
+#include <SDL3/SDL_render.h>
 #include <iostream>
 
 const int WINDOW_SCALE = 20;
@@ -33,18 +36,22 @@ int main(int argc, char *argv[]) {
     SDL_Quit();
     return 1;
   }
+  // SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
 
   cpu.init();
   // TODO:: change to argv[1] after
-  if (!cpu.loadRom("./IBM.ch8")) {
+  if (!cpu.loadRom("IBM.ch8")) {
+    std::cout << "Error: Loading Rom" << std::endl;
     running = false;
   }
+
   /// if (argc != 2) {/   std::cout << "Enter the filename to open" <<
   /// std::endl;
   //   SDL_Quit();
   // }
 
   // TODO: Correct emulation loop
+
   while (running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -52,10 +59,57 @@ int main(int argc, char *argv[]) {
       case (SDL_EVENT_QUIT):
         running = false;
         break;
+      case (SDL_EVENT_KEY_DOWN):
+        switch (event.key.scancode) {
+          {
+          case (SDL_SCANCODE_1):
+            std::cout << "1";
+            break;
+          case (SDL_SCANCODE_2):
+            std::cout << "2";
+            break;
+          case (SDL_SCANCODE_3):
+            std::cout << "3";
+            break;
+          case (SDL_SCANCODE_4):
+            break;
+          case (SDL_SCANCODE_Q):
+            break;
+          case (SDL_SCANCODE_W):
+            break;
+          case (SDL_SCANCODE_E):
+            break;
+          case (SDL_SCANCODE_R):
+            break;
+          case (SDL_SCANCODE_A):
+            break;
+          case (SDL_SCANCODE_S):
+            break;
+          case (SDL_SCANCODE_D):
+            break;
+          case (SDL_SCANCODE_F):
+            break;
+          case (SDL_SCANCODE_Z):
+            break;
+          case (SDL_SCANCODE_X):
+            break;
+          case (SDL_SCANCODE_C):
+            break;
+          case (SDL_SCANCODE_V):
+            break;
+          default:
+            break;
+          }
+        }
       }
     }
-  }
+    cpu.executeCycle();
 
+    if (cpu.draw) {
+      cpu.drawGraphics();
+      cpu.draw = false;
+    }
+  }
   // close window
   SDL_DestroyWindow(window);
   SDL_Quit();
