@@ -63,7 +63,11 @@ int main(int argc, char *argv[]) {
         switch (event.key.scancode) {
           {
           case (SDL_SCANCODE_1):
-            std::cout << "1";
+            cpu.executeCycle();
+            if (cpu.draw) {
+              cpu.drawGraphics();
+              cpu.draw = false;
+            }
             break;
           case (SDL_SCANCODE_2):
             std::cout << "2";
@@ -103,12 +107,12 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    cpu.executeCycle();
-
-    if (cpu.draw) {
-      cpu.drawGraphics();
-      cpu.draw = false;
-    }
+    // cpu.executeCycle();
+    //
+    // if (cpu.draw) {
+    //   cpu.drawGraphics();
+    //   cpu.draw = false;
+    // }
   }
   // close window
   SDL_DestroyWindow(window);

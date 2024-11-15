@@ -4,7 +4,7 @@
 class cpu {
 private:
   unsigned short opcode;
-  unsigned short memory[4096];
+  unsigned char memory[4096];
   unsigned char V[16]; // Registers V0-VE
   unsigned short I;    // Index Register
   unsigned short pc;   // Program Counter

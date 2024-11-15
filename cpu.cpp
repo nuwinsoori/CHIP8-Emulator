@@ -59,10 +59,11 @@ bool cpu::loadRom(const char *romName) {
   }
   fclose(rom);
 
-  // DEBUG
-  for (int i = 0x200; i < 0x200 + 23; i++) {
-    std::cout << std::hex << memory[i] << " ";
-  }
+  // // DEBUG
+  // for (int i = 0x200; i < 0x200 + 23; i += 2) {
+  //   std::cout << std::hex << memory[i] << std::hex << memory[i + 1] << " ";
+  // }
+  // std::cout << std::endl;
 
   return true;
 }
@@ -78,38 +79,38 @@ DXYN (display/draw)
 
 void cpu::executeCycle() {
   // fetch
-  opcode = memory[pc];
-  opcode <<= 8;
-  opcode |= memory[pc + 1];
+  opcode = memory[pc] << 8 | memory[pc + 1];
   pc += 2;
 
   // decode & execute
+  std::cout << std::hex << opcode << std::endl;
   switch (opcode & 0xF000) {
   case (0x0):
     switch (opcode & 0x000F) {
     case (0x0): // 00E0: Clear Screen
-      std::cout << "00e0 ";
+      // std::cout << "00e0 " << std::endl;
       memset(gfx, 0, 64 * 32);
       break;
     }
+    break;
   case (0x1): // 1NNN: jump to NNN
-    std::cout << "1nnn ";
+    // std::cout << "1nnn " << std::endl;
     pc = OP_NNN;
     break;
   case (0x6): // 6XNN: set V[X] to NN;
-    std::cout << "6xnn ";
+    // std::cout << "6xnn " << std::endl;
     V[OP_X] = OP_NNN;
     break;
   case (0x7): // 7XNN: V[X] += NN
-    std::cout << "7xnn ";
+    // std::cout << "7xnn " << std::endl;
     V[OP_X] += OP_NN;
     break;
   case (0xA): // ANNN: I = NNN
-    std::cout << "annn ";
+    // std::cout << "annn " << std::endl;
     I = OP_NNN;
     break;
   case (0xD): // DXYN: Display
-    std::cout << "dxyn ";
+    // std::cout << "dxyn " << std::endl;
     break;
   }
 }
