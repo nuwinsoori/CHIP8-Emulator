@@ -107,12 +107,12 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    // cpu.executeCycle();
-    //
-    // if (cpu.draw) {
-    //   cpu.drawGraphics();
-    //   cpu.draw = false;
-    // }
+    cpu.executeCycle();
+
+    if (cpu.draw) {
+      cpu.drawGraphics();
+      cpu.draw = false;
+    }
   }
   // close window
   SDL_DestroyWindow(window);

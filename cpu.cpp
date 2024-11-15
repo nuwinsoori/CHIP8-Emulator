@@ -5,8 +5,8 @@
 #include <iostream>
 #include <stdio.h>
 
-#define OP_X (opcode & 0x0F00)
-#define OP_Y (opcode & 0x00F0)
+#define OP_X ((opcode & 0x0F00) >> 8)
+#define OP_Y ((opcode & 0x00F0) >> 4)
 #define OP_N (opcode & 0x000F)
 #define OP_NN (opcode & 0x00FF)
 #define OP_NNN (opcode & 0x0FFF)
@@ -83,40 +83,58 @@ void cpu::executeCycle() {
   pc += 2;
 
   // decode & execute
-  std::cout << std::hex << opcode << std::endl;
   switch (opcode & 0xF000) {
-  case (0x0):
+  case (0x0000):
     switch (opcode & 0x000F) {
     case (0x0): // 00E0: Clear Screen
       // std::cout << "00e0 " << std::endl;
       memset(gfx, 0, 64 * 32);
+      draw = true; // TODO::
       break;
     }
     break;
-  case (0x1): // 1NNN: jump to NNN
+  case (0x1000): // 1NNN: jump to NNN
     // std::cout << "1nnn " << std::endl;
     pc = OP_NNN;
     break;
-  case (0x6): // 6XNN: set V[X] to NN;
+  case (0x6000): // 6XNN: set V[X] to NN;
     // std::cout << "6xnn " << std::endl;
-    V[OP_X] = OP_NNN;
+    V[OP_X] = OP_NN;
     break;
-  case (0x7): // 7XNN: V[X] += NN
+  case (0x7000): // 7XNN: V[X] += NN
     // std::cout << "7xnn " << std::endl;
     V[OP_X] += OP_NN;
     break;
-  case (0xA): // ANNN: I = NNN
+  case (0xA000): // ANNN: I = NNN
     // std::cout << "annn " << std::endl;
     I = OP_NNN;
     break;
-  case (0xD): // DXYN: Display
+  case (0xD000): // DXYN: Display
     // std::cout << "dxyn " << std::endl;
+    unsigned short x = V[OP_X] % 64;
+    unsigned short y = V[OP_Y] % 32;
+    unsigned short n = OP_N;
+    unsigned short pixel = 0;
+    V[0xF] = 0;
+    for (int height = 0; height < n; height++) {
+      pixel = memory[I + height];
+      for (int bit = 0; bit < 8; bit++) {
+        if ((pixel & (0x80 >> bit)) != 0) {
+          if (gfx[((x + bit) % 64 + ((y + height) % 32) * 64)] == 1) {
+            V[0xF] = 1;
+          }
+          gfx[x + bit + ((y + height) * 64)] ^= 1;
+        }
+      }
+    }
+
+    draw = true;
     break;
   }
 }
 
 void cpu::drawGraphics() {
-  system("clear");
+  std::cout << "\033[2J\033[H" << std::endl;
   int count = 0;
   for (int j = 0; j < 32; j++) {
     for (int i = 0; i < 64; i++) {
