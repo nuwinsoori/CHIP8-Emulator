@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
   cpu.init();
   // TODO:: change to argv[1] after
-  if (!cpu.loadRom("IBM.ch8")) {
+  if (!cpu.loadRom("./tests/3-corax+.ch8")) {
     std::cout << "Error: Loading Rom" << std::endl;
     running = false;
   }
