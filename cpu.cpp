@@ -84,100 +84,137 @@ void cpu::executeCycle() {
 
   // decode & execute
   switch (opcode & 0xF000) {
-  case (0x0000):
+  case (0x0000): {
     switch (opcode & 0x000F) {
     case (0x0): // 00E0: Clear Screen
       std::memset(gfx, 0, 64 * 32);
       draw = true;
       break;
-    case (0xE): // 00EE: return from subroutine TODO:
+    case (0xE): // 00EE: return from subroutine
       sp--;
       pc = stack[sp];
       break;
     }
     break;
-
+  }
   case (0x1000): // 1NNN: jump to NNN
+  {
     pc = OP_NNN;
     break;
-
-  case (0x2000): // 2NNN: jump to NNN, push PC to stack TODO:
+  }
+  case (0x2000): // 2NNN: jump to NNN, push PC to stack
+  {
     stack[sp] = pc;
     sp++;
     pc = OP_NNN;
     break;
-
+  }
   case (0x3000): // 3XNN: skip instruction if VX == NN
+  {
     if (V[OP_X] == OP_NN) {
       pc += 2;
     }
     break;
+  }
 
   case (0x4000): // 4XNN: skip instruction if VX != NN
+  {
     if (V[OP_X] != OP_NN) {
       pc += 2;
     }
     break;
+  }
 
   case (0x5000): // 5XY0: skip instruction if VX == VY
+  {
     if (V[OP_X] == V[OP_Y]) {
       pc += 2;
     }
-
+  }
   case (0x6000): // 6XNN: set V[X] to NN;
+  {
     V[OP_X] = OP_NN;
     break;
-  case (0x7000): // 7XNN: V[X] += NN
+  }
+  case (0x7000): // 7XNN: V[X] += NNk
+  {
     V[OP_X] += OP_NN;
     break;
+  }
 
   case (0x8000): // Logic functions
+  {
     switch (opcode & 0x000F) {
     case (0x0): // 8XY0: VX = VY
+    {
       V[OP_X] = V[OP_Y];
       break;
+    }
     case (0x1): // 8XY1: VX |= VY
+    {
       V[OP_X] |= V[OP_Y];
       break;
+    }
     case (0x2): // 8XY2: VX &= VY
+    {
       V[OP_X] &= V[OP_Y];
       break;
+    }
     case (0x3): // 8XY3: VX ^= VY
+    {
       V[OP_X] ^= V[OP_Y];
       break;
+    }
+
     case (0x4): // 8XY4: VX += VY (carry flag VF)
+    {
       V[0xF] = 0;
       V[OP_X] += V[OP_Y];
       if (V[OP_X] > 255) {
         V[0xF] = 1;
       }
       break;
+    }
+
     case (0x5): // 8XY5: VX -= VY
+    {
       V[0xF] = (V[OP_X] > V[OP_Y]) ? 1 : 0;
       V[OP_X] -= V[OP_Y];
       break;
+    }
     case (0x7): // 8XY7: VX = VY - VX
+    {
       V[0xF] = (V[OP_Y] > V[OP_X]) ? 1 : 0;
       V[OP_X] = V[OP_Y] - V[OP_X];
       break;
+    }
+
     case (0x6): // AMBIGUOUS! 8XY6: VX = VY, VX >> 1, VF = bitshifted num
+    {
       V[OP_X] = V[OP_Y];
       V[0xF] = (V[OP_X] & 0b1);
       V[OP_X] >>= 1;
       break;
+    }
     case (0xE): // AMBIGUOUS! 8XYE: VX = VY, VX << 1, VF = bitshifted num
+    {
       V[OP_X] = V[OP_Y];
       V[0xF] = (((V[OP_X] & 0x80) >> 7) & 0b1);
       V[OP_X] <<= 1;
       break;
     }
+    }
     break;
+  }
 
   case (0xA000): // ANNN: I = NNN
+  {
     I = OP_NNN;
     break;
+  }
 
   case (0xD000): // DXYN: Display  V[X] = xpos, V[Y] = ypos, N = height
+  {
     unsigned short x = V[OP_X] % 64;
     unsigned short y = V[OP_Y] % 32;
     unsigned short n = OP_N;
@@ -194,9 +231,42 @@ void cpu::executeCycle() {
         }
       }
     }
-
     draw = true;
     break;
+  }
+
+  case (0xF000): {
+    switch (opcode & 0x00FF) {
+    case (0x33): { // FX33: Binary-coded decimal conversion
+      int hundreds = 0, tens = 0, ones = 0;
+      int number = V[OP_X];
+      hundreds = number / 100;
+      tens = (number / 10) % 10;
+      ones = number % 10;
+      memory[I] = hundreds;
+      memory[I + 1] = tens;
+      memory[I + 2] = ones;
+      break;
+    }
+    case (0x55): { // FX55: store memory from V0 to VX
+      for (int i = 0; i <= OP_X; i++) {
+        memory[I + i] = V[i];
+      }
+      break;
+    }
+    case (0x65): { // FX65: store memory from V0 to VX
+      for (int i = 0; i <= OP_X; i++) {
+        V[i] = memory[I + i];
+      }
+      break;
+    }
+    case (0x1E): {
+      I += V[OP_X];
+      break;
+    }
+    }
+    break;
+  }
   }
 }
 
