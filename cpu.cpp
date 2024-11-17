@@ -38,6 +38,7 @@ void cpu::init() {
   memset(memory, 0, sizeof(memory)); // Clear memory
   memset(stack, 0, sizeof(stack));   // Clear stack
   memset(gfx, 0, sizeof(gfx));       // Reset display
+  memset(key, 0, sizeof(key));       // Reset keys
 
   // Load font into memory
   for (int i = 0; i < 80; i++) {
@@ -68,19 +69,11 @@ bool cpu::loadRom(const char *romName) {
   return true;
 }
 
-/*
-00E0 (clear screen)
-1NNN (jump)
-6XNN (set register VX)
-7XNN (add value to register VX)
-ANNN (set index register I)
-DXYN (display/draw)
-*/
-
 void cpu::executeCycle() {
   // fetch
   opcode = memory[pc] << 8 | memory[pc + 1];
   pc += 2;
+  // std::cout << std::hex << opcode << std::endl;
 
   // decode & execute
   switch (opcode & 0xF000) {
@@ -130,6 +123,7 @@ void cpu::executeCycle() {
     if (V[OP_X] == V[OP_Y]) {
       pc += 2;
     }
+    break;
   }
   case (0x6000): // 6XNN: set V[X] to NN;
   {
@@ -153,56 +147,69 @@ void cpu::executeCycle() {
     case (0x1): // 8XY1: VX |= VY
     {
       V[OP_X] |= V[OP_Y];
+      V[0xF] = 0;
       break;
     }
     case (0x2): // 8XY2: VX &= VY
     {
       V[OP_X] &= V[OP_Y];
+      V[0xF] = 0;
       break;
     }
     case (0x3): // 8XY3: VX ^= VY
     {
       V[OP_X] ^= V[OP_Y];
+      V[0xF] = 0;
       break;
     }
 
     case (0x4): // 8XY4: VX += VY (carry flag VF)
     {
-      V[0xF] = 0;
+      int x = V[OP_X] + V[OP_Y];
       V[OP_X] += V[OP_Y];
-      if (V[OP_X] > 255) {
-        V[0xF] = 1;
-      }
+      V[0xF] = (x > 255) ? 1 : 0;
       break;
     }
 
     case (0x5): // 8XY5: VX -= VY
     {
-      V[0xF] = (V[OP_X] > V[OP_Y]) ? 1 : 0;
+      unsigned short temp = (V[OP_X] >= V[OP_Y]) ? 1 : 0;
       V[OP_X] -= V[OP_Y];
+      V[0xF] = temp;
       break;
     }
-    case (0x7): // 8XY7: VX = VY - VX
+    case (0x6): // AMBIGUOUS! 8XY6: VX = VY, VX >> 1, VF = bitshifted num
     {
-      V[0xF] = (V[OP_Y] > V[OP_X]) ? 1 : 0;
-      V[OP_X] = V[OP_Y] - V[OP_X];
+      unsigned short temp = (V[OP_X] & 0b1);
+      V[OP_X] = V[OP_Y];
+      V[OP_X] >>= 1;
+      V[0xF] = temp;
       break;
     }
 
-    case (0x6): // AMBIGUOUS! 8XY6: VX = VY, VX >> 1, VF = bitshifted num
+    case (0x7): // 8XY7: VX = VY - VX
     {
-      V[OP_X] = V[OP_Y];
-      V[0xF] = (V[OP_X] & 0b1);
-      V[OP_X] >>= 1;
+      unsigned short temp = (V[OP_X] <= V[OP_Y]) ? 1 : 0;
+      V[OP_X] = V[OP_Y] - V[OP_X];
+      V[0xF] = temp;
       break;
     }
+
     case (0xE): // AMBIGUOUS! 8XYE: VX = VY, VX << 1, VF = bitshifted num
     {
       V[OP_X] = V[OP_Y];
-      V[0xF] = (((V[OP_X] & 0x80) >> 7) & 0b1);
+      unsigned short temp = (((V[OP_X] & 0x80) >> 7) & 0b1);
       V[OP_X] <<= 1;
+      V[0xF] = temp;
       break;
     }
+    }
+    break;
+  }
+
+  case (0x9000): { // 9XY0: skip insturction if VX != VY
+    if (V[OP_X] != V[OP_Y]) {
+      pc += 2;
     }
     break;
   }
@@ -213,30 +220,92 @@ void cpu::executeCycle() {
     break;
   }
 
-  case (0xD000): // DXYN: Display  V[X] = xpos, V[Y] = ypos, N = height
+  case (0xB000): { // BNNN: PC = V0 + NNN
+    pc = OP_NNN + V[0x0];
+    break;
+  }
+
+  case (0xC000): { // VX = rand() & NN
+    int randNum = rand() % 256;
+    V[OP_X] = randNum & OP_NN;
+    break;
+  }
+
+  case (0xD000): // DXYN: Display V[X] = xpos, V[Y] = ypos, N = height
   {
-    unsigned short x = V[OP_X] % 64;
-    unsigned short y = V[OP_Y] % 32;
+    unsigned short x = V[OP_X];
+    unsigned short y = V[OP_Y];
     unsigned short n = OP_N;
     unsigned short pixel = 0;
     V[0xF] = 0;
     for (int height = 0; height < n; height++) {
       pixel = memory[I + height];
+      unsigned short drawY = (y + height) % 32;
       for (int bit = 0; bit < 8; bit++) {
+        unsigned short drawX = (x + bit) % 64;
         if ((pixel & (0x80 >> bit)) != 0) {
-          if (gfx[((x + bit) % 64 + ((y + height) % 32) * 64)] == 1) {
+          unsigned short index = drawX + (drawY * 64);
+          if (gfx[index] == 1) {
             V[0xF] = 1;
           }
-          gfx[x + bit + ((y + height) * 64)] ^= 1;
+          gfx[index] ^= 1;
         }
       }
     }
     draw = true;
     break;
   }
+  case (0xE000): {
+    switch (opcode & 0x00FF) {
+    case (0x9E): { // EX9E: skip next instructin if button in VX pressed
+      if (key[V[OP_X]] != 0) {
+        pc += 2;
+      }
+      break;
+    }
+    case (0xA1): { // EXA1: skip instruction if button in VX NOT pressed
+      if (key[V[OP_X]] == 0) {
+        pc += 2;
+      }
+      break;
+    }
+    }
+    break;
+  }
 
   case (0xF000): {
     switch (opcode & 0x00FF) {
+    case (0x0A): { // FX0A: Vx = get_key()
+      bool keyPressed = false;
+      for (int i = 0; i < 16; i++) {
+        if (key[i] != 0) {
+          V[OP_X] = i;
+          keyPressed = true;
+          break;
+        }
+      }
+      if (!keyPressed) {
+        pc -= 2;
+        return;
+      }
+      break;
+    }
+    case (0x07): { // FX07: VX = delay_timer
+      V[OP_X] = delay_timer;
+      break;
+    }
+    case (0x15): { // FX15: delay_timer = VX
+      delay_timer = V[OP_X];
+      break;
+    }
+    case (0x18): { // FX18: sound_timer = VX
+      sound_timer = V[OP_X];
+      break;
+    }
+    case (0x1E): { // FX1E: I += VX
+      I += V[OP_X];
+      break;
+    }
     case (0x33): { // FX33: Binary-coded decimal conversion
       int hundreds = 0, tens = 0, ones = 0;
       int number = V[OP_X];
@@ -250,18 +319,16 @@ void cpu::executeCycle() {
     }
     case (0x55): { // FX55: store memory from V0 to VX
       for (int i = 0; i <= OP_X; i++) {
-        memory[I + i] = V[i];
+        memory[I] = V[i];
+        I++;
       }
       break;
     }
     case (0x65): { // FX65: store memory from V0 to VX
       for (int i = 0; i <= OP_X; i++) {
-        V[i] = memory[I + i];
+        V[i] = memory[I];
+        I++;
       }
-      break;
-    }
-    case (0x1E): {
-      I += V[OP_X];
       break;
     }
     }
@@ -285,4 +352,16 @@ void cpu::drawGraphics() {
     std::cout << std::endl;
   }
   draw = false;
+}
+
+void cpu::keyDown(int pressedKey) { key[pressedKey] = 1; }
+void cpu::keyUp(int pressedKey) { key[pressedKey] = 0; }
+
+void cpu::timers() {
+  if (sound_timer > 0) {
+    sound_timer--;
+  }
+  if (delay_timer > 0) {
+    delay_timer--;
+  }
 }

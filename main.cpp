@@ -27,6 +27,7 @@ SDL_Window *initWindow() {
 }
 
 int main(int argc, char *argv[]) {
+  srand(time(0));
   cpu cpu;
   bool running = true;
 
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
 
   cpu.init();
   // TODO:: change to argv[1] after
-  if (!cpu.loadRom("./tests/3-corax+.ch8")) {
+  if (!cpu.loadRom("./tests/4-flags.ch8")) {
     std::cout << "Error: Loading Rom" << std::endl;
     running = false;
   }
@@ -59,61 +60,146 @@ int main(int argc, char *argv[]) {
       case (SDL_EVENT_QUIT):
         running = false;
         break;
-      case (SDL_EVENT_KEY_DOWN):
+      case (SDL_EVENT_KEY_DOWN): {
+        for (int i = 0; i < 16; i++) {
+        }
         switch (event.key.scancode) {
           {
           case (SDL_SCANCODE_1):
+            cpu.keyDown(0x1);
+            break;
+          case (SDL_SCANCODE_2):
+            cpu.keyDown(0x2);
+            break;
+          case (SDL_SCANCODE_3):
+            cpu.keyDown(0x3);
+            break;
+          case (SDL_SCANCODE_4):
+            cpu.keyDown(0xC);
+            break;
+          case (SDL_SCANCODE_Q):
+            cpu.keyDown(0x4);
+            break;
+          case (SDL_SCANCODE_W):
+            cpu.keyDown(0x5);
+            break;
+          case (SDL_SCANCODE_E):
+            cpu.keyDown(0x6);
+            break;
+          case (SDL_SCANCODE_R):
+            cpu.keyDown(0xD);
+            break;
+          case (SDL_SCANCODE_A):
+            cpu.keyDown(0x7);
+            break;
+          case (SDL_SCANCODE_S):
+            cpu.keyDown(0x8);
+            break;
+          case (SDL_SCANCODE_D):
+            cpu.keyDown(0x9);
+            break;
+          case (SDL_SCANCODE_F):
+            cpu.keyDown(0xE);
+            break;
+          case (SDL_SCANCODE_Z):
+            cpu.keyDown(0xA);
+            break;
+          case (SDL_SCANCODE_X):
+            cpu.keyDown(0x0);
+            break;
+          case (SDL_SCANCODE_C):
+            cpu.keyDown(0xB);
+            break;
+          case (SDL_SCANCODE_V):
+            cpu.keyDown(0xF);
+            break;
+          case (SDL_SCANCODE_N): {
             cpu.executeCycle();
             if (cpu.draw) {
               cpu.drawGraphics();
               cpu.draw = false;
             }
             break;
-          case (SDL_SCANCODE_2):
-            std::cout << "2";
-            break;
-          case (SDL_SCANCODE_3):
-            std::cout << "3";
-            break;
-          case (SDL_SCANCODE_4):
-            break;
-          case (SDL_SCANCODE_Q):
-            break;
-          case (SDL_SCANCODE_W):
-            break;
-          case (SDL_SCANCODE_E):
-            break;
-          case (SDL_SCANCODE_R):
-            break;
-          case (SDL_SCANCODE_A):
-            break;
-          case (SDL_SCANCODE_S):
-            break;
-          case (SDL_SCANCODE_D):
-            break;
-          case (SDL_SCANCODE_F):
-            break;
-          case (SDL_SCANCODE_Z):
-            break;
-          case (SDL_SCANCODE_X):
-            break;
-          case (SDL_SCANCODE_C):
-            break;
-          case (SDL_SCANCODE_V):
-            break;
+          }
           default:
             break;
           }
         }
+        break;
+      }
+      case (SDL_EVENT_KEY_UP): {
+        switch (event.key.scancode) {
+        case (SDL_SCANCODE_1):
+          cpu.keyUp(0x1);
+          break;
+        case (SDL_SCANCODE_2):
+          cpu.keyUp(0x2);
+          break;
+        case (SDL_SCANCODE_3):
+          cpu.keyUp(0x3);
+          break;
+        case (SDL_SCANCODE_4):
+          cpu.keyUp(0xC);
+          break;
+        case (SDL_SCANCODE_Q):
+          cpu.keyUp(0x4);
+          break;
+        case (SDL_SCANCODE_W):
+          cpu.keyUp(0x5);
+          break;
+        case (SDL_SCANCODE_E):
+          cpu.keyUp(0x6);
+          break;
+        case (SDL_SCANCODE_R):
+          cpu.keyUp(0xD);
+          break;
+        case (SDL_SCANCODE_A):
+          cpu.keyUp(0x7);
+          break;
+        case (SDL_SCANCODE_S):
+          cpu.keyUp(0x8);
+          break;
+        case (SDL_SCANCODE_D):
+          cpu.keyUp(0x9);
+          break;
+        case (SDL_SCANCODE_F):
+          cpu.keyUp(0xE);
+          break;
+        case (SDL_SCANCODE_Z):
+          cpu.keyUp(0xA);
+          break;
+        case (SDL_SCANCODE_X):
+          cpu.keyUp(0x0);
+          break;
+        case (SDL_SCANCODE_C):
+          cpu.keyUp(0xB);
+          break;
+        case (SDL_SCANCODE_V):
+          cpu.keyUp(0xF);
+          break;
+        case (SDL_SCANCODE_P): {
+          std::cout << std::hex << cpu.V[0] << std::endl;
+        }
+        default:
+          break;
+        }
+        break;
+      }
       }
     }
-    cpu.executeCycle();
 
-    if (cpu.draw) {
-      cpu.drawGraphics();
-      cpu.draw = false;
+    if (argc == 1) {
+      cpu.executeCycle();
+
+      if (cpu.draw) {
+        cpu.drawGraphics();
+        cpu.draw = false;
+      }
     }
+
+    cpu.timers();
   }
+
   // close window
   SDL_DestroyWindow(window);
   SDL_Quit();
