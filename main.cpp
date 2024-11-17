@@ -4,9 +4,11 @@
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_render.h>
+#include <SDL3/SDL_timer.h>
 #include <iostream>
 
 const int WINDOW_SCALE = 20;
+const int IPF = 15;
 
 SDL_Window *initWindow() {
   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
@@ -41,7 +43,7 @@ int main(int argc, char *argv[]) {
 
   cpu.init();
   // TODO:: change to argv[1] after
-  if (!cpu.loadRom("./tests/4-flags.ch8")) {
+  if (!cpu.loadRom("./tests/5-quirks.ch8")) {
     std::cout << "Error: Loading Rom" << std::endl;
     running = false;
   }
@@ -189,15 +191,19 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc == 1) {
-      cpu.executeCycle();
+      for (int i = 0; i < IPF; i++) {
+        cpu.executeCycle();
 
-      if (cpu.draw) {
-        cpu.drawGraphics();
-        cpu.draw = false;
+        if (cpu.draw) {
+          cpu.drawGraphics();
+          cpu.draw = false;
+          break;
+        }
       }
     }
 
     cpu.timers();
+    SDL_Delay(16);
   }
 
   // close window

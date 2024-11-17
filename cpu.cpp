@@ -233,17 +233,24 @@ void cpu::executeCycle() {
 
   case (0xD000): // DXYN: Display V[X] = xpos, V[Y] = ypos, N = height
   {
-    unsigned short x = V[OP_X];
-    unsigned short y = V[OP_Y];
+    // CLIPPING : OFF
+    unsigned short x = V[OP_X] % 64;
+    unsigned short y = V[OP_Y] % 32;
     unsigned short n = OP_N;
     unsigned short pixel = 0;
     V[0xF] = 0;
     for (int height = 0; height < n; height++) {
+      if (y + height > 32) {
+        continue;
+      }
       pixel = memory[I + height];
-      unsigned short drawY = (y + height) % 32;
       for (int bit = 0; bit < 8; bit++) {
-        unsigned short drawX = (x + bit) % 64;
+        if (x + bit > 64) {
+          continue;
+        }
         if ((pixel & (0x80 >> bit)) != 0) {
+          unsigned short drawX = (x + bit) % 64;
+          unsigned short drawY = (y + height) % 32;
           unsigned short index = drawX + (drawY * 64);
           if (gfx[index] == 1) {
             V[0xF] = 1;
@@ -255,6 +262,39 @@ void cpu::executeCycle() {
     draw = true;
     break;
   }
+
+    // CLIPPING : ON
+    // unsigned short x = V[OP_X];
+    // unsigned short y = V[OP_Y];
+    // unsigned short n = OP_N;
+    // unsigned short pixel = 0;
+    // V[0xF] = 0;
+    //
+    // for (int height = 0; height < n; height++) {
+    //   if (y + height >= 32) { // Clip vertically
+    //     break;
+    //   }
+    //   pixel = memory[I + height];
+    //   for (int bit = 0; bit < 8; bit++) {
+    //     if (x + bit >= 64) { // Clip horizontally
+    //       continue;
+    //     }
+    //     unsigned short drawX = x + bit;
+    //     unsigned short drawY = y + height;
+    //     unsigned short index = drawX + (drawY * 64);
+    //
+    //     if ((pixel & (0x80 >> bit)) != 0) {
+    //       if (gfx[index] == 1) {
+    //         V[0xF] = 1; // Set collision flag
+    //       }
+    //       gfx[index] ^= 1; // Toggle the pixel
+    //     }
+    //   }
+    // }
+    // draw = true;
+    // break;
+    // }
+
   case (0xE000): {
     switch (opcode & 0x00FF) {
     case (0x9E): { // EX9E: skip next instructin if button in VX pressed
