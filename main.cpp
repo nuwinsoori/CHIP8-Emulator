@@ -39,7 +39,13 @@ int main(int argc, char *argv[]) {
     SDL_Quit();
     return 1;
   }
-  // SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
+
+  SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
+  SDL_Texture *texture = SDL_CreateTexture(
+      renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+      64 * WINDOW_SCALE, 32 * WINDOW_SCALE);
+
+  SDL_SetRenderTarget(renderer, texture);
 
   cpu.init();
   // TODO:: change to argv[1] after
@@ -56,6 +62,7 @@ int main(int argc, char *argv[]) {
   // TODO: Correct emulation loop
 
   while (running) {
+    // Reset to black
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.type) {
@@ -195,7 +202,21 @@ int main(int argc, char *argv[]) {
         cpu.executeCycle();
 
         if (cpu.draw) {
-          cpu.drawGraphics();
+          SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+          SDL_RenderClear(renderer);
+          for (int y = 0; y < 32; y++) {
+            for (int x = 0; x < 64; x++) {
+              if (cpu.gfx[x + (y * 64)]) {
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                SDL_FRect rect = {static_cast<float>(x * WINDOW_SCALE),
+                                  static_cast<float>(y * WINDOW_SCALE),
+                                  WINDOW_SCALE, WINDOW_SCALE};
+                SDL_RenderFillRect(renderer, &rect);
+              }
+            }
+          }
+          SDL_SetRenderTarget(renderer, NULL);
+          SDL_RenderPresent(renderer);
           cpu.draw = false;
           break;
         }
