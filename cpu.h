@@ -17,13 +17,14 @@ private:
 public:
   unsigned char gfx[64 * 32]; // Pixel State (graphics)
   unsigned char key[16];      // State of keys 0-F
+  unsigned char prevKeys[16]; // State of keys in previous frame
   void init();
   bool loadRom(const char *romName);
   void executeCycle();
-  bool draw;
+  bool breakIPF;
   void drawGraphics(); // TODO: DEBUG FUNCTION
   void keyDown(int pressedKey);
   void keyUp(int pressedKey);
-  void timers();
+  bool timers();
   unsigned char V[16]; // Registers V0-VE
 };

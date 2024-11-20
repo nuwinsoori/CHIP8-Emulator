@@ -4,6 +4,7 @@
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_render.h>
+#include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_timer.h>
 #include <iostream>
 
@@ -49,7 +50,7 @@ int main(int argc, char *argv[]) {
 
   cpu.init();
   // TODO:: change to argv[1] after
-  if (!cpu.loadRom("./tests/5-quirks.ch8")) {
+  if (!cpu.loadRom("./tests/6-keypad.ch8")) {
     std::cout << "Error: Loading Rom" << std::endl;
     running = false;
   }
@@ -62,8 +63,11 @@ int main(int argc, char *argv[]) {
   // TODO: Correct emulation loop
 
   while (running) {
-    // Reset to black
     SDL_Event event;
+    // set previous keys
+    for (int i = 0; i < 16; i++) {
+      cpu.prevKeys[i] = cpu.key[i];
+    }
     while (SDL_PollEvent(&event)) {
       switch (event.type) {
       case (SDL_EVENT_QUIT):
@@ -122,12 +126,10 @@ int main(int argc, char *argv[]) {
           case (SDL_SCANCODE_V):
             cpu.keyDown(0xF);
             break;
-          case (SDL_SCANCODE_N): {
-            cpu.executeCycle();
-            if (cpu.draw) {
-              cpu.drawGraphics();
-              cpu.draw = false;
-            }
+          case (SDL_SCANCODE_ESCAPE): {
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            return 0;
             break;
           }
           default:
@@ -201,7 +203,7 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i < IPF; i++) {
         cpu.executeCycle();
 
-        if (cpu.draw) {
+        if (cpu.breakIPF) {
           SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
           SDL_RenderClear(renderer);
           for (int y = 0; y < 32; y++) {
@@ -217,13 +219,15 @@ int main(int argc, char *argv[]) {
           }
           SDL_SetRenderTarget(renderer, NULL);
           SDL_RenderPresent(renderer);
-          cpu.draw = false;
+          cpu.breakIPF = false;
           break;
         }
       }
     }
 
-    cpu.timers();
+    if (cpu.timers()) {
+    }
+
     SDL_Delay(16);
   }
 

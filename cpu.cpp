@@ -31,21 +31,22 @@ unsigned char chip8_fontset[80] = {
 };
 
 void cpu::init() {
-  pc = 0x200;                        // Program Counter to start of program
-  opcode = 0x00;                     // Reset current opcode
-  I = 0;                             // Reset index register
-  sp = 0;                            // Reset stack pointer
-  memset(memory, 0, sizeof(memory)); // Clear memory
-  memset(stack, 0, sizeof(stack));   // Clear stack
-  memset(gfx, 0, sizeof(gfx));       // Reset display
-  memset(key, 0, sizeof(key));       // Reset keys
+  pc = 0x200;                            // Program Counter to start of program
+  opcode = 0x00;                         // Reset current opcode
+  I = 0;                                 // Reset index register
+  sp = 0;                                // Reset stack pointer
+  memset(memory, 0, sizeof(memory));     // Clear memory
+  memset(stack, 0, sizeof(stack));       // Clear stack
+  memset(gfx, 0, sizeof(gfx));           // Reset display
+  memset(key, 0, sizeof(key));           // Reset keys
+  memset(prevKeys, 0, sizeof(prevKeys)); // Reset Prevkeys
 
   // Load font into memory
   for (int i = 0; i < 80; i++) {
     memory[i] = chip8_fontset[i];
   }
 
-  draw = false;
+  breakIPF = false;
 }
 
 bool cpu::loadRom(const char *romName) {
@@ -81,7 +82,7 @@ void cpu::executeCycle() {
     switch (opcode & 0x000F) {
     case (0x0): // 00E0: Clear Screen
       std::memset(gfx, 0, 64 * 32);
-      draw = true;
+      breakIPF = true;
       break;
     case (0xE): // 00EE: return from subroutine
       sp--;
@@ -259,7 +260,7 @@ void cpu::executeCycle() {
         }
       }
     }
-    draw = true;
+    breakIPF = true;
     break;
   }
 
@@ -291,7 +292,7 @@ void cpu::executeCycle() {
     //     }
     //   }
     // }
-    // draw = true;
+    // breakIPF = true;
     // break;
     // }
 
@@ -314,17 +315,17 @@ void cpu::executeCycle() {
   }
 
   case (0xF000): {
+    bool keyReleased = false;
     switch (opcode & 0x00FF) {
     case (0x0A): { // FX0A: Vx = get_key()
-      bool keyPressed = false;
       for (int i = 0; i < 16; i++) {
-        if (key[i] != 0) {
+        if (prevKeys[i] == 1 && key[i] == 0) {
           V[OP_X] = i;
-          keyPressed = true;
+          keyReleased = true;
           break;
         }
       }
-      if (!keyPressed) {
+      if (!keyReleased) {
         pc -= 2;
         return;
       }
@@ -391,17 +392,18 @@ void cpu::drawGraphics() {
     }
     std::cout << std::endl;
   }
-  draw = false;
+  breakIPF = false;
 }
 
 void cpu::keyDown(int pressedKey) { key[pressedKey] = 1; }
 void cpu::keyUp(int pressedKey) { key[pressedKey] = 0; }
 
-void cpu::timers() {
+bool cpu::timers() {
   if (sound_timer > 0) {
     sound_timer--;
   }
   if (delay_timer > 0) {
     delay_timer--;
   }
+  return (sound_timer > 0);
 }
