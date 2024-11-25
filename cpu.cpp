@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include <SDL3/SDL_log.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -45,33 +46,45 @@ void cpu::init() {
   for (int i = 0; i < 80; i++) {
     memory[i] = chip8_fontset[i];
   }
-
   breakIPF = false;
+  draw = false;
+  running = true;
 }
 
 bool cpu::loadRom(const char *romName) {
-  int count = 0;
   FILE *rom = fopen(romName, "rb");
   if (!rom) {
+    SDL_Log("ERROR: incorrect file path");
+    fclose(rom);
     return false;
   }
-  while (!feof(rom)) {
-    fread(&memory[0x200 + count], 1, 1, rom);
-    count++;
+
+  // check size of rom fits
+  fseek(rom, 0, SEEK_END);
+  const size_t romSize = ftell(rom);
+  const size_t maxSize = (sizeof(memory) - 0x200);
+  rewind(rom);
+
+  if (romSize > maxSize) {
+    SDL_Log("ERROR: Rom size is too big");
+    fclose(rom);
+    return false;
   }
+
+  // Load rom into memory
+  if (fread(&memory[0x200], romSize, 1, rom) != 1) {
+    SDL_Log("ERROR: loading rom into memory");
+    fclose(rom);
+    return false;
+  };
+
   fclose(rom);
-
-  // // DEBUG
-  // for (int i = 0x200; i < 0x200 + 23; i += 2) {
-  //   std::cout << std::hex << memory[i] << std::hex << memory[i + 1] << " ";
-  // }
-  // std::cout << std::endl;
-
   return true;
 }
 
 void cpu::executeCycle() {
   // fetch
+  breakIPF = false; // reset breakloop
   opcode = memory[pc] << 8 | memory[pc + 1];
   pc += 2;
   // std::cout << std::hex << opcode << std::endl;
@@ -226,7 +239,7 @@ void cpu::executeCycle() {
     break;
   }
 
-  case (0xC000): { // VX = rand() & NN
+  case (0xC000): { // CXNN: VX = rand() & NN
     int randNum = rand() % 256;
     V[OP_X] = randNum & OP_NN;
     break;
@@ -261,6 +274,7 @@ void cpu::executeCycle() {
       }
     }
     breakIPF = true;
+    draw = true;
     break;
   }
 
@@ -294,7 +308,7 @@ void cpu::executeCycle() {
     // }
     // breakIPF = true;
     // break;
-    // }
+    //
 
   case (0xE000): {
     switch (opcode & 0x00FF) {
@@ -315,13 +329,14 @@ void cpu::executeCycle() {
   }
 
   case (0xF000): {
-    bool keyReleased = false;
     switch (opcode & 0x00FF) {
     case (0x0A): { // FX0A: Vx = get_key()
+      bool keyReleased = false;
       for (int i = 0; i < 16; i++) {
         if (prevKeys[i] == 1 && key[i] == 0) {
           V[OP_X] = i;
           keyReleased = true;
+          breakIPF = true;
           break;
         }
       }
@@ -347,6 +362,11 @@ void cpu::executeCycle() {
       I += V[OP_X];
       break;
     }
+    case (0x29): {
+      I = (V[OP_X] * 0x5);
+      break;
+    }
+
     case (0x33): { // FX33: Binary-coded decimal conversion
       int hundreds = 0, tens = 0, ones = 0;
       int number = V[OP_X];
@@ -361,38 +381,25 @@ void cpu::executeCycle() {
     case (0x55): { // FX55: store memory from V0 to VX
       for (int i = 0; i <= OP_X; i++) {
         memory[I] = V[i];
-        I++;
+        I++; // I gets incremented due to classic chip8 implementation
       }
       break;
     }
     case (0x65): { // FX65: store memory from V0 to VX
       for (int i = 0; i <= OP_X; i++) {
         V[i] = memory[I];
-        I++;
+        I++; // I gets incremented due to classic chip8 implementation
       }
       break;
     }
     }
     break;
   }
+  default: {
+    SDL_Log("ERROR: unrecognized opcode");
+    running = false;
   }
-}
-
-void cpu::drawGraphics() {
-  std::cout << "\033[2J\033[H" << std::endl;
-  int count = 0;
-  for (int j = 0; j < 32; j++) {
-    for (int i = 0; i < 64; i++) {
-      if (gfx[count]) {
-        std::cout << "#";
-      } else {
-        std::cout << ".";
-      }
-      count++;
-    }
-    std::cout << std::endl;
   }
-  breakIPF = false;
 }
 
 void cpu::keyDown(int pressedKey) { key[pressedKey] = 1; }

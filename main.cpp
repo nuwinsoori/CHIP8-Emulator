@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_audio.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_oldnames.h>
@@ -31,8 +32,19 @@ SDL_Window *initWindow() {
 
 int main(int argc, char *argv[]) {
   srand(time(0));
+  if (argc == 1) {
+    SDL_Log("ERROR: enter name of rom to run");
+    return 1;
+  }
+  const char *romName = argv[1];
+
   cpu cpu;
-  bool running = true;
+  cpu.init();
+  if (!cpu.loadRom(romName)) {
+    cpu.running = false;
+    return 1;
+    // error already logged
+  }
 
   SDL_Window *window = initWindow();
   if (window == NULL) {
@@ -48,21 +60,19 @@ int main(int argc, char *argv[]) {
 
   SDL_SetRenderTarget(renderer, texture);
 
-  cpu.init();
-  // TODO:: change to argv[1] after
-  if (!cpu.loadRom("./tests/6-keypad.ch8")) {
-    std::cout << "Error: Loading Rom" << std::endl;
-    running = false;
-  }
+  // TODO: audio
+  SDL_AudioSpec audioSpec;
+  audioSpec.format = SDL_AUDIO_S8;
+  audioSpec.channels = 1;
+  audioSpec.freq = 48000;
 
-  /// if (argc != 2) {/   std::cout << "Enter the filename to open" <<
-  /// std::endl;
-  //   SDL_Quit();
-  // }
+  SDL_AudioStream *audioStream = SDL_OpenAudioDeviceStream(
+      SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audioSpec, NULL, NULL);
 
-  // TODO: Correct emulation loop
+  SDL_ResumeAudioStreamDevice(audioStream);
+  SDL_PutAudioStreamData(audioStream, NULL, 800);
 
-  while (running) {
+  while (cpu.running) {
     SDL_Event event;
     // set previous keys
     for (int i = 0; i < 16; i++) {
@@ -71,7 +81,7 @@ int main(int argc, char *argv[]) {
     while (SDL_PollEvent(&event)) {
       switch (event.type) {
       case (SDL_EVENT_QUIT):
-        running = false;
+        cpu.running = false;
         break;
       case (SDL_EVENT_KEY_DOWN): {
         for (int i = 0; i < 16; i++) {
@@ -199,36 +209,37 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    if (argc == 1) {
-      for (int i = 0; i < IPF; i++) {
-        cpu.executeCycle();
-
-        if (cpu.breakIPF) {
-          SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-          SDL_RenderClear(renderer);
-          for (int y = 0; y < 32; y++) {
-            for (int x = 0; x < 64; x++) {
-              if (cpu.gfx[x + (y * 64)]) {
-                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-                SDL_FRect rect = {static_cast<float>(x * WINDOW_SCALE),
-                                  static_cast<float>(y * WINDOW_SCALE),
-                                  WINDOW_SCALE, WINDOW_SCALE};
-                SDL_RenderFillRect(renderer, &rect);
-              }
-            }
-          }
-          SDL_SetRenderTarget(renderer, NULL);
-          SDL_RenderPresent(renderer);
-          cpu.breakIPF = false;
-          break;
-        }
+    for (int i = 0; i < IPF; i++) {
+      cpu.executeCycle();
+      if (cpu.breakIPF) {
+        break;
       }
     }
-
-    if (cpu.timers()) {
+    if (cpu.draw) {
+      SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+      SDL_RenderClear(renderer);
+      for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 64; x++) {
+          if (cpu.gfx[x + (y * 64)]) {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_FRect rect = {static_cast<float>(x * WINDOW_SCALE),
+                              static_cast<float>(y * WINDOW_SCALE),
+                              WINDOW_SCALE, WINDOW_SCALE};
+            SDL_RenderFillRect(renderer, &rect);
+          }
+        }
+      }
+      SDL_SetRenderTarget(renderer, NULL);
+      SDL_RenderPresent(renderer);
+      cpu.draw = false;
     }
 
+    // Delay by 16ms to have timer decrement at 60hz (roughly)
     SDL_Delay(16);
+
+    if (cpu.timers()) {
+      // TODO: Sound
+    }
   }
 
   // close window
