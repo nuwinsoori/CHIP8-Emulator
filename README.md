@@ -6,8 +6,8 @@ CHIP-8 programs are run using a CHIP-8 virtual machine (Wikipedia).
 This emulator is designed to run games for the original CHIP-8. 
 
 ## Showcase
-[![Tetris](./screenshots/tetris_placeholder.png)](./screenshots/tetris.mp4?raw=true)
-*Tetris (click to open video)*
+![Tetris](./screenshots/tetris.gif "Tetris")
+*Tetris*
 
 ![Space Invaders](./screenshots/space_invaders.png "Space Invaders")
 *Space Invaders*
